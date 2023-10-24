@@ -1,21 +1,11 @@
-#![allow(unused_imports)]
-#![allow(dead_code)]
-
+use ascii::AsciiStr;
 use clap::Parser;
-use io_arc::IoArc;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serialport::{ClearBuffer, SerialPort};
 use std::io::prelude::*;
+use std::io::{BufRead, BufReader};
 use std::str::FromStr;
-use std::sync::Arc;
-//use crossterm::{cursor, execute, style, terminal};
-//use std::io::stdout;
-use std::io::{BufRead, BufReader, BufWriter};
-//use std::thread::sleep;
 use std::time::Duration;
-//use std::time::Instant;
-//use std::io::{ErrorKind,Thread};
-use ascii::AsciiStr;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -489,6 +479,7 @@ fn poll_thread(mut port: Box<dyn SerialPort>) {
     }
 }
 
+#[allow(dead_code)]
 fn reset_device(port: &mut Box<dyn SerialPort>) {
     // To reset the device:
     //   Set RTS to HIGH
