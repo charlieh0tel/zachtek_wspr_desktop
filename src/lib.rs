@@ -115,7 +115,7 @@ pub struct CurrentModeCommand {
 
 impl CurrentModeCommand {
     // Current Mode {CCM} Text 1 S=Sig, W=WSPR, N=None
-    const CODE: &'static [u8] = b"CCM";
+    pub const CODE: &'static [u8] = b"CCM";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::CurrentModeCommand(CurrentModeCommand {
@@ -131,7 +131,7 @@ pub struct CurrentReferenceCommand {
 
 impl CurrentReferenceCommand {
     // Command CurrentReference [CCR] G Text 1 E=External, I=Internal
-    const CODE: &'static [u8] = b"CCR";
+    pub const CODE: &'static [u8] = b"CCR";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::CurrentReferenceCommand(CurrentReferenceCommand {
@@ -147,7 +147,7 @@ pub struct TxPauseOption {
 
 impl TxPauseOption {
     // Option TX Pause {OTP} Text 5 0-99999 Minutes
-    const CODE: &'static [u8] = b"OTP";
+    pub const CODE: &'static [u8] = b"OTP";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         let minutes: u32 = parse_number(command_string, args).unwrap();
@@ -165,7 +165,7 @@ pub struct StartModeOption {
 
 impl StartModeOption {
     // Option StartMode {OSM} Text 1 S=Sig, W=WSPR, N=None
-    const CODE: &'static [u8] = b"OSM";
+    pub const CODE: &'static [u8] = b"OSM";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::StartModeOption(StartModeOption {
@@ -182,7 +182,7 @@ pub struct BandTxEnable {
 
 impl BandTxEnable {
     // Option Band TX Enable {OBD} Text 2 Text 1. Band number *, E=Enable, D=Disable
-    const CODE: &'static [u8] = b"OBD";
+    pub const CODE: &'static [u8] = b"OBD";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         if args.len() != 4 {
@@ -210,7 +210,7 @@ pub struct LocationSourceOption {
 
 impl LocationSourceOption {
     // Option Location {OLC} Text 1. G=GPS calculated, M=Manual (DL4 data)
-    const CODE: &'static [u8] = b"OLC";
+    pub const CODE: &'static [u8] = b"OLC";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::LocationSourceOption(LocationSourceOption {
@@ -227,7 +227,7 @@ pub struct LocatorPrecisionOption {
 impl LocatorPrecisionOption {
     // Option Locator Precision [OLP] S/G Text 1. 4 or 6 = Number of
     // character used in the Maidenhead report.
-    const CODE: &'static [u8] = b"OLP";
+    pub const CODE: &'static [u8] = b"OLP";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::LocatorPrecisionOption(LocatorPrecisionOption {
@@ -243,7 +243,7 @@ pub struct PowerEncodingOption {
 
 impl PowerEncodingOption {
     // Option ....
-    const CODE: &'static [u8] = b"OPW";
+    pub const CODE: &'static [u8] = b"OPW";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::PowerEncodingOption(PowerEncodingOption {
@@ -261,7 +261,7 @@ impl TimeSlotOption {
     // Option Time Slot [OTS] S/G Text 2 Time Slot Code 0/ 1;36. 0*-4=10 min. schedule , 5-14=20min schedule, 15=Band
     // coordinated Schedule, 16=No schedule, 17=Tracker (only TX when
     // on the move or at top of hour)
-    const CODE: &'static [u8] = b"OTS";
+    pub const CODE: &'static [u8] = b"OTS";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         let number: u16 = parse_number(command_string, args).unwrap();
@@ -287,7 +287,7 @@ pub struct PrefixSuffixOption {
 impl PrefixSuffixOption {
     // Option PreFix/Suffix [OPS] S/G Test1 P=Use Prefix. S=Use Suffix
     // N=None
-    const CODE: &'static [u8] = b"OPS";
+    pub const CODE: &'static [u8] = b"OPS";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::PrefixSuffixOption(PrefixSuffixOption {
@@ -304,7 +304,7 @@ pub struct ConstellationOption {
 impl ConstellationOption {
     // Option set GPS Constellations {OSC} Text 1. G=GPS Only
     // B=BeiDou Only, A= GPS And BeiDou
-    const CODE: &'static [u8] = b"OSC";
+    pub const CODE: &'static [u8] = b"OSC";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::ConstellationOption(ConstellationOption {
@@ -320,7 +320,7 @@ pub struct CallSignData {
 
 impl CallSignData {
     // Data CallSign {DCS} Text 6
-    const CODE: &'static [u8] = b"DCS";
+    pub const CODE: &'static [u8] = b"DCS";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         // Data CallSign {DCS} Text 6
@@ -339,7 +339,7 @@ impl SuffixData {
     // Data Suffix [DSF] S/G Text 3 Suffix code 000-;3009=* 0 to
     // 9. 010-035=A to Z suffix.  Call Sign suffix code. be
     // automatically appended after the Call Sign followed by the
-    const CODE: &'static [u8] = b"DSF";
+    pub const CODE: &'static [u8] = b"DSF";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::SuffixData(SuffixData {
@@ -358,7 +358,7 @@ impl PrefixData {
     // if less than three characters. A-Z and 0-9 allowed Call Sign
     // prefix chars. A / will be automatically added between the
     // Prefix and the Call Sign
-    const CODE: &'static [u8] = b"DPF";
+    pub const CODE: &'static [u8] = b"DPF";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::PrefixData(PrefixData {
@@ -374,7 +374,7 @@ pub struct Locator4Data {
 
 impl Locator4Data {
     // Data Locator 4 {DL4} Text 4
-    const CODE: &'static [u8] = b"DL4";
+    pub const CODE: &'static [u8] = b"DL4";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::Locator4Data(Locator4Data {
@@ -390,7 +390,7 @@ pub struct Locator6Data {
 
 impl Locator6Data {
     // Data Locator 6 {DL6} Text 6
-    const CODE: &'static [u8] = b"DL6";
+    pub const CODE: &'static [u8] = b"DL6";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::Locator6Data(Locator6Data {
@@ -406,7 +406,7 @@ pub struct PowerData {
 
 impl PowerData {
     // Data PowerData {DPD} Text 2 (00 to 60) dBm
-    const CODE: &'static [u8] = b"DPD";
+    pub const CODE: &'static [u8] = b"DPD";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::PowerData(PowerData {
@@ -422,7 +422,7 @@ pub struct NameData {
 
 impl NameData {
     // Data Name {DNM} Text 40
-    const CODE: &'static [u8] = b"DNM";
+    pub const CODE: &'static [u8] = b"DNM";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::NameData(NameData {
@@ -439,7 +439,7 @@ pub struct GeneratorFrequencyData {
 impl GeneratorFrequencyData {
     // Data Generator Freq {DGF} Text 12 Frequency in
     // CentiHertz. Padded with leading zeros to 12 characters
-    const CODE: &'static [u8] = b"DGF";
+    pub const CODE: &'static [u8] = b"DGF";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         let centihertz: u32 = parse_number(command_string, args).unwrap();
@@ -457,7 +457,7 @@ impl ExternalReferenceFrequencyData {
     // Data External Reference Frequency [DER] S/G Text 9 Frequency in
     // Hertz. Padded with leading zeros to 9 characters Normally
     // 010000000
-    const CODE: &'static [u8] = b"DER";
+    pub const CODE: &'static [u8] = b"DER";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::ExternalReferenceFrequencyData(ExternalReferenceFrequencyData {
@@ -474,7 +474,7 @@ pub struct ProductModelNumberFactory {
 impl ProductModelNumberFactory {
     // Factory Product model Number [FPN] G Text 5 0-65534
     // 1011=WSPR-TX_LP1, 1012=WSPR Desktop, 1017=WSPR Mini
-    const CODE: &'static [u8] = b"FPN";
+    pub const CODE: &'static [u8] = b"FPN";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::ProductModelNumberFactory(ProductModelNumberFactory {
@@ -490,7 +490,7 @@ pub struct HardwareVersionFactory {
 
 impl HardwareVersionFactory {
     // Factory Hardware Version [FHV] S/G Text 3 0-255
-    const CODE: &'static [u8] = b"FHV";
+    pub const CODE: &'static [u8] = b"FHV";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::HardwareVersionFactory(HardwareVersionFactory {
@@ -506,7 +506,7 @@ pub struct HardwareRevisionFactory {
 
 impl HardwareRevisionFactory {
     // Factory Hardware Revision [FHR] S/G Text 3 0-255
-    const CODE: &'static [u8] = b"FHR";
+    pub const CODE: &'static [u8] = b"FHR";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::HardwareRevisionFactory(HardwareRevisionFactory {
@@ -517,17 +517,32 @@ impl HardwareRevisionFactory {
 
 #[derive(Debug, Clone)]
 pub struct SoftwareVersionFactory {
-    pub hardware_version: String,
+    pub software_version: String,
 }
 
 impl SoftwareVersionFactory {
     // Factory Software Version [FSV] G Text 3 0-255
-    const CODE: &'static [u8] = b"FSV";
+    pub const CODE: &'static [u8] = b"FSV";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
-        // Factory Hardware Revision [FHV] S/G Text 3 0-255
         Response::SoftwareVersionFactory(SoftwareVersionFactory {
-            hardware_version: ascii_bytes_to_string(args),
+            software_version: ascii_bytes_to_string(args),
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SoftwareRevisionFactory {
+    pub software_revision: String,
+}
+
+impl SoftwareRevisionFactory {
+    // Factory Software Revision [FSR] G Text 3 0-255
+    pub const CODE: &'static [u8] = b"FSR";
+
+    fn parse(_command_string: &str, args: &[u8]) -> Response {
+        Response::SoftwareRevisionFactory(SoftwareRevisionFactory {
+            software_revision: ascii_bytes_to_string(args),
         })
     }
 }
@@ -541,7 +556,7 @@ impl ReferenceOscillatorFrequencyFactory {
     // Factory Reference Oscillator Frequency [FRF] S/G Text 9
     // Frequency in Hertz. Padded with leading zeros to 9 characters
     // Normally 026000000
-    const CODE: &'static [u8] = b"FRF";
+    pub const CODE: &'static [u8] = b"FRF";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::ReferenceOscillatorFrequencyFactory(ReferenceOscillatorFrequencyFactory {
@@ -563,7 +578,7 @@ impl LowPassFilterFactory {
     // the firmware will use this if no other filter is a good match,
     // 99=Nothing fitted (open circuit) the firmware will never use
     // this as a filter
-    const CODE: &'static [u8] = b"FLP";
+    pub const CODE: &'static [u8] = b"FLP";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         // TODO(ch): fix this
@@ -586,7 +601,7 @@ pub struct Locator4GPS {
 
 impl Locator4GPS {
     // GPS locator 4 char Maidenhead {GL4} Text 4
-    const CODE: &'static [u8] = b"GL4";
+    pub const CODE: &'static [u8] = b"GL4";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::Locator4GPS(Locator4GPS {
@@ -602,7 +617,7 @@ pub struct Locator6GPS {
 
 impl Locator6GPS {
     // GPS locator 6 char Maidenhead {GL6} Text 6
-    const CODE: &'static [u8] = b"GL6";
+    pub const CODE: &'static [u8] = b"GL6";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::Locator6GPS(Locator6GPS {
@@ -618,7 +633,7 @@ pub struct TimeGPS {
 
 impl TimeGPS {
     // GPS Time {GTM} Text 8 HH:MM:SS
-    const CODE: &'static [u8] = b"GTM";
+    pub const CODE: &'static [u8] = b"GTM";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         // TODO(ch): parse this.
@@ -635,7 +650,7 @@ pub struct LockStatusGPS {
 
 impl LockStatusGPS {
     // GPS Lock {GLC} Text 1 T=True F=False
-    const CODE: &'static [u8] = b"GLC";
+    pub const CODE: &'static [u8] = b"GLC";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         // TODO(ch): parse this.
@@ -652,7 +667,7 @@ pub struct SatelliteInfoGPS {
 
 impl SatelliteInfoGPS {
     // GPS Satellite data {GSI} Text2 Text3 Text2 Text2 - ID Az El SNR
-    const CODE: &'static [u8] = b"GSI";
+    pub const CODE: &'static [u8] = b"GSI";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         // TODO(ch): parse this.
@@ -670,7 +685,7 @@ pub struct TransmitterFrequency {
 impl TransmitterFrequency {
     // Transmitter Frequency {TFQ} Text 5-12 Frequency in centiHz, no
     // leading zeros
-    const CODE: &'static [u8] = b"TFQ";
+    pub const CODE: &'static [u8] = b"TFQ";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         let centihertz: u64 = parse_number(command_string, args).unwrap();
@@ -686,7 +701,7 @@ pub struct TransmitterStatus {
 
 impl TransmitterStatus {
     // Transmitter On {TON} Text 1 T=True F=False
-    const CODE: &'static [u8] = b"TON";
+    pub const CODE: &'static [u8] = b"TON";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         if args.len() != 1 {
@@ -709,7 +724,7 @@ pub struct MicrocontrollerPause {}
 
 impl MicrocontrollerPause {
     // Microcontroller Pause {MPS} Text 7 0-4,000,000Seconds
-    const CODE: &'static [u8] = b"MPS";
+    pub const CODE: &'static [u8] = b"MPS";
 
     fn parse(_command_string: &str, _args: &[u8]) -> Response {
         // TODO(ch): implement
@@ -724,7 +739,7 @@ pub struct MicrocontrollerInfo {
 
 impl MicrocontrollerInfo {
     // Microcontroller Information {MIN} Text
-    const CODE: &'static [u8] = b"MIN";
+    pub const CODE: &'static [u8] = b"MIN";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         Response::MicrocontrollerInfo(MicrocontrollerInfo {
@@ -740,7 +755,7 @@ pub struct LowPassFilterSet {
 
 impl LowPassFilterSet {
     // Low Pass filter set {LPI} Text 1 A-D
-    const CODE: &'static [u8] = b"LPI";
+    pub const CODE: &'static [u8] = b"LPI";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         Response::LowPassFilterSet(LowPassFilterSet {
@@ -757,7 +772,7 @@ pub struct MicrocontrollerVoltage {
 impl MicrocontrollerVoltage {
     // MicroController VCC Voltage {MVC} Text 4 0-9999mV (Normally
     // 3300)
-    const CODE: &'static [u8] = b"MVC";
+    pub const CODE: &'static [u8] = b"MVC";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         let millivolts: u32 = ascii_bytes_to_string(args).parse().unwrap();
@@ -773,7 +788,7 @@ pub struct TransmitterCurrentBand {
 
 impl TransmitterCurrentBand {
     // Transmitter Current Band {TBN} Text 2=Band number *
-    const CODE: &'static [u8] = b"TBN";
+    pub const CODE: &'static [u8] = b"TBN";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
         let band: Band = parse_enum_from_number(command_string, args)
@@ -790,7 +805,7 @@ pub struct TransmitterWSPRSymbol {
 impl TransmitterWSPRSymbol {
     // Transmitter WSPR Symbol {TWS} Text 2 Text3 Band number *, WSPR
     // symbol count 0-161
-    const CODE: &'static [u8] = b"TWS";
+    pub const CODE: &'static [u8] = b"TWS";
 
     fn parse(_command_string: &str, args: &[u8]) -> Response {
         // TODO(ch): figure this out
@@ -805,7 +820,7 @@ pub struct TransmitterBandCycleComplete {}
 
 impl TransmitterBandCycleComplete {
     // Transmitter WSPR Band Cycle Complete {TCC}
-    const CODE: &'static [u8] = b"TCC";
+    pub const CODE: &'static [u8] = b"TCC";
 
     fn parse(_command_string: &str, _args: &[u8]) -> Response {
         Response::TransmitterBandCycleComplete(TransmitterBandCycleComplete {})
@@ -838,6 +853,7 @@ pub enum Response {
     HardwareVersionFactory(HardwareVersionFactory),
     HardwareRevisionFactory(HardwareRevisionFactory),
     SoftwareVersionFactory(SoftwareVersionFactory),
+    SoftwareRevisionFactory(SoftwareRevisionFactory),
     ReferenceOscillatorFrequencyFactory(ReferenceOscillatorFrequencyFactory),
     LowPassFilterFactory(LowPassFilterFactory),
     Locator4GPS(Locator4GPS),

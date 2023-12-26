@@ -12,22 +12,48 @@ struct Args {
 }
 
 fn poll_thread(mut port: Box<dyn SerialPort>) {
-    const GET_COMMANDS: &[&[u8]] = &[
-        b"[CCM]", b"[CCR]", b"[OTP]", b"[OSM]", b"[OBD]", b"[OLC]", b"[OLP]", b"[OPW]", b"[OTS]",
-        b"[OPS]", b"[OSC]", b"[DSC]", b"[DSF]", b"[DPF]", b"[DL4]", b"[DL6]", b"[DPD]", b"[DNM]",
-        b"[DGF]", b"[DER]", b"[FPN]", b"[FHV]", b"[FHR]", b"[FSV]", b"[FSR]", b"[FRF]", b"[FLP]",
+    const CODES: &[&[u8]] = &[
+        CurrentModeCommand::CODE,
+        CurrentReferenceCommand::CODE,
+        TxPauseOption::CODE,
+        StartModeOption::CODE,
+        BandTxEnable::CODE,
+        LocationSourceOption::CODE,
+        LocatorPrecisionOption::CODE,
+        PowerEncodingOption::CODE,
+        TimeSlotOption::CODE,
+        PrefixSuffixOption::CODE,
+        ConstellationOption::CODE,
+        SuffixData::CODE,
+        PrefixData::CODE,
+        Locator4Data::CODE,
+        Locator6Data::CODE,
+        PowerData::CODE,
+        NameData::CODE,
+        GeneratorFrequencyData::CODE,
+        ExternalReferenceFrequencyData::CODE,
+        ProductModelNumberFactory::CODE,
+        HardwareVersionFactory::CODE,
+        HardwareRevisionFactory::CODE,
+        SoftwareVersionFactory::CODE,
+        SoftwareRevisionFactory::CODE,
+        ReferenceOscillatorFrequencyFactory::CODE,
+        LowPassFilterFactory::CODE
     ];
     const LF: &[u8] = b"\n";
+    const OPEN_BRACKET: &[u8] = b"[";
+    const CLOSE_BRACKET: &[u8] = b"]";
     loop {
-        for command in GET_COMMANDS {
-            //println!("writing '{}'", ascii_bytes_to_string(command));
+        for code in CODES {
             port.write_all(LF).expect("Failed to write.");
-            port.write_all(command).expect("Failed to write.");
+            port.write_all(OPEN_BRACKET).expect("Failed to write.");
+            port.write_all(code).expect("Failed to write.");
+            port.write_all(CLOSE_BRACKET).expect("Failed to write.");
             port.write_all(LF).expect("Failed to write.");
             port.flush().expect("Failed to write.");
             std::thread::sleep(Duration::from_millis(500));
         }
-        std::thread::sleep(Duration::from_secs(5));
+        std::thread::sleep(Duration::from_secs(10));
     }
 }
 
