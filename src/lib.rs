@@ -1,10 +1,12 @@
-#![allow(dead_code)]
-
+//use anyhow::{bail, Context, Result};
 use ascii::AsciiStr;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use serialport::SerialPort;
+use serialport::{ClearBuffer, SerialPort};
+use std::io;
+use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::time::Duration;
+use tracing::{trace, warn};
 
 #[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
@@ -242,7 +244,7 @@ pub struct PowerEncodingOption {
 }
 
 impl PowerEncodingOption {
-    // Option ....
+    // Option Power
     pub const CODE: &'static [u8] = b"OPW";
 
     fn parse(command_string: &str, args: &[u8]) -> Response {
@@ -285,7 +287,7 @@ pub struct PrefixSuffixOption {
 }
 
 impl PrefixSuffixOption {
-    // Option PreFix/Suffix [OPS] S/G Test1 P=Use Prefix. S=Use Suffix
+    // Option Prefix/Suffix [OPS] S/G Test1 P=Use Prefix. S=Use Suffix
     // N=None
     pub const CODE: &'static [u8] = b"OPS";
 
@@ -679,7 +681,7 @@ impl SatelliteInfoGPS {
 
 #[derive(Debug, Clone)]
 pub struct TransmitterFrequency {
-    hertz: f32,
+    pub hertz: f32,
 }
 
 impl TransmitterFrequency {
@@ -906,13 +908,14 @@ fn parse_number<T: FromStr>(command_string: &str, args: &[u8]) -> Result<T, ()> 
 
 pub fn process_line(mut s: Vec<u8>) -> Option<Response> {
     s.retain_mut(|c| c != &b'\n' && c != &b'\r');
+    trace!("line: '{:?}'", ascii_bytes_to_string(&s));
 
     if s.is_empty() {
         return None;
     }
 
     if s.len() < 5 {
-        println!("Line is too short (s='{:?}')", s);
+        warn!("Line is too short (s='{s:?}')");
         return None;
     }
 
@@ -921,11 +924,7 @@ pub fn process_line(mut s: Vec<u8>) -> Option<Response> {
     let command_string = ascii_bytes_to_string(command);
     let args = &s[6..];
 
-    /*
-    println!(
-        "read: '{:?}' '{}'", command,
-        ascii_bytes_to_string(args));
-    */
+    trace!("read: '{:?}' '{}'", command, ascii_bytes_to_string(args));
 
     let response: Response = match code {
         CurrentModeCommand::CODE => CurrentModeCommand::parse(&command_string, args),
@@ -954,6 +953,7 @@ pub fn process_line(mut s: Vec<u8>) -> Option<Response> {
         HardwareVersionFactory::CODE => HardwareVersionFactory::parse(&command_string, args),
         HardwareRevisionFactory::CODE => HardwareRevisionFactory::parse(&command_string, args),
         SoftwareVersionFactory::CODE => SoftwareVersionFactory::parse(&command_string, args),
+        SoftwareRevisionFactory::CODE => SoftwareRevisionFactory::parse(&command_string, args),
         ReferenceOscillatorFrequencyFactory::CODE => {
             ReferenceOscillatorFrequencyFactory::parse(&command_string, args)
         }
@@ -981,25 +981,127 @@ pub fn process_line(mut s: Vec<u8>) -> Option<Response> {
     Some(response)
 }
 
-fn reset_device(port: &mut Box<dyn SerialPort>) {
-    // To reset the device:
-    //   Set RTS to HIGH
-    //   Wait a while (100ms)
-    //   Set RTS to LOW
-    port.write_request_to_send(true).expect("Failed to set RTS");
-    std::thread::sleep(Duration::from_millis(100));
-    port.write_request_to_send(false)
-        .expect("Failed to set RTS");
+fn write_code<RW>(port: &mut RW, code: &[u8])
+where
+    RW: io::Read + io::Write,
+{
+    const OPEN_BRACKET: &[u8] = b"[";
+    const CLOSE_BRACKET: &[u8] = b"]";
+    const LF: &[u8] = b"\n";
+
+    port.write_all(LF).expect("Failed to write.");
+    port.write_all(OPEN_BRACKET).expect("Failed to write.");
+    port.write_all(code).expect("Failed to write.");
+    port.write_all(CLOSE_BRACKET).expect("Failed to write.");
+    port.write_all(LF).expect("Failed to write.");
 }
 
-pub fn set_run(port: &mut Box<dyn SerialPort>) {
-    // To set device to run:
-    //   Set DTR LOW
-    //   Wait a while (100ms)
-    port.write_data_terminal_ready(false)
-        .expect("Failed to set DTR");
-    std::thread::sleep(Duration::from_millis(100));
-    port.write_request_to_send(false)
-        .expect("Failed to set RTS");
-    std::thread::sleep(Duration::from_millis(100));
+pub struct ZachtekDevice<'a> {
+    port: &'a mut Box<dyn SerialPort>,
+}
+
+impl<'a> ZachtekDevice<'a> {
+    pub fn new(port: &'a mut Box<dyn SerialPort>) -> Self {
+        Self { port }
+    }
+
+    pub fn reset_device(&mut self) {
+        // To reset the device:
+        //   Set RTS to HIGH
+        //   Wait a while (100ms)
+        //   Set RTS to LOW
+        self.port
+            .write_request_to_send(true)
+            .expect("Failed to set RTS");
+        std::thread::sleep(Duration::from_millis(100));
+        self.port
+            .write_request_to_send(false)
+            .expect("Failed to set RTS");
+    }
+
+    pub fn set_run(&mut self) {
+        // To set device to run:
+        //   Set DTR LOW
+        //   Wait a while (100ms)
+        self.port
+            .write_data_terminal_ready(false)
+            .expect("Failed to set DTR");
+        std::thread::sleep(Duration::from_millis(100));
+        self.port
+            .write_request_to_send(false)
+            .expect("Failed to set RTS");
+        std::thread::sleep(Duration::from_millis(100));
+    }
+
+    fn poll_thread(mut port: Box<dyn SerialPort>, poll_sleep_interval: Duration) {
+        const CODES: &[&[u8]] = &[
+            CurrentModeCommand::CODE,
+            CurrentReferenceCommand::CODE,
+            TxPauseOption::CODE,
+            StartModeOption::CODE,
+            BandTxEnable::CODE,
+            LocationSourceOption::CODE,
+            LocatorPrecisionOption::CODE,
+            PowerEncodingOption::CODE,
+            TimeSlotOption::CODE,
+            PrefixSuffixOption::CODE,
+            ConstellationOption::CODE,
+            SuffixData::CODE,
+            PrefixData::CODE,
+            Locator4Data::CODE,
+            Locator6Data::CODE,
+            PowerData::CODE,
+            NameData::CODE,
+            GeneratorFrequencyData::CODE,
+            ExternalReferenceFrequencyData::CODE,
+            ProductModelNumberFactory::CODE,
+            HardwareVersionFactory::CODE,
+            HardwareRevisionFactory::CODE,
+            SoftwareVersionFactory::CODE,
+            SoftwareRevisionFactory::CODE,
+            ReferenceOscillatorFrequencyFactory::CODE,
+            LowPassFilterFactory::CODE,
+        ];
+        loop {
+            for code in CODES {
+                write_code(&mut port, code);
+                port.flush().expect("Failed to write.");
+                std::thread::sleep(Duration::from_millis(500));
+            }
+            std::thread::sleep(poll_sleep_interval);
+        }
+    }
+
+    pub fn start_poll_thread(&self, poll_sleep_interval: Duration) {
+        let _ = std::thread::spawn({
+            let port = self.port.try_clone().expect("Failed to clone port.");
+            move || {
+                Self::poll_thread(port, poll_sleep_interval);
+            }
+        });
+    }
+
+    pub fn pump(&mut self) {
+        self.port
+            .clear(ClearBuffer::Input)
+            .expect("Failed to clear input.");
+        let mut reader = BufReader::new(&mut self.port);
+        loop {
+            let mut buf = vec![];
+            match reader.read_until(b'\n', &mut buf) {
+                Ok(_) => {
+                    let response = process_line(buf);
+                    if response.is_some() {
+                        println!("{:?}", response.unwrap());
+                    }
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                    panic!("Error: Timeout on serial port");
+                }
+                Err(e) => {
+                    panic!("Error: Failed to read from serial port: {}", e);
+                }
+            }
+        }
+    }
 }
