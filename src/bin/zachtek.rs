@@ -49,9 +49,17 @@ fn main() -> Result<()> {
 
     let mut device = ZachtekDevice::new(&mut port);
 
-    device.set_run();
+    device.set_run()?;
     device.start_poll_thread(args.poll_sleep_interval);
-    device.pump();
-
-    Ok(())
+    device.clear_input()?;
+    loop {
+        match device.read_response() {
+            Ok(response) => {
+                println!("{response:?}");
+            }
+            Err(err) => {
+                println!("Err: {err:?}");
+            }
+        }
+    }
 }

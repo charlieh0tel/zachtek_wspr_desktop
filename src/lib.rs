@@ -1,12 +1,11 @@
-//use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use ascii::AsciiStr;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serialport::{ClearBuffer, SerialPort};
 use std::io;
-use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::{trace, warn};
+use tracing::{error, trace, warn};
 
 #[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
@@ -119,10 +118,10 @@ impl CurrentModeCommand {
     // Current Mode {CCM} Text 1 S=Sig, W=WSPR, N=None
     pub const CODE: &'static [u8] = b"CCM";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::CurrentModeCommand(CurrentModeCommand {
-            mode: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::CurrentModeCommand(CurrentModeCommand {
+            mode: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -135,10 +134,10 @@ impl CurrentReferenceCommand {
     // Command CurrentReference [CCR] G Text 1 E=External, I=Internal
     pub const CODE: &'static [u8] = b"CCR";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::CurrentReferenceCommand(CurrentReferenceCommand {
-            reference: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::CurrentReferenceCommand(CurrentReferenceCommand {
+            reference: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -151,12 +150,12 @@ impl TxPauseOption {
     // Option TX Pause {OTP} Text 5 0-99999 Minutes
     pub const CODE: &'static [u8] = b"OTP";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        let minutes: u32 = parse_number(command_string, args).unwrap();
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        let minutes: u32 = parse_number(command_string, args)?;
         let seconds: u64 = 60 * minutes as u64;
-        Response::TxPauseOption(TxPauseOption {
+        Ok(Response::TxPauseOption(TxPauseOption {
             duration: Duration::from_secs(seconds),
-        })
+        }))
     }
 }
 
@@ -169,10 +168,10 @@ impl StartModeOption {
     // Option StartMode {OSM} Text 1 S=Sig, W=WSPR, N=None
     pub const CODE: &'static [u8] = b"OSM";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::StartModeOption(StartModeOption {
-            mode: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::StartModeOption(StartModeOption {
+            mode: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -186,22 +185,19 @@ impl BandTxEnable {
     // Option Band TX Enable {OBD} Text 2 Text 1. Band number *, E=Enable, D=Disable
     pub const CODE: &'static [u8] = b"OBD";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        if args.len() != 4 {
-            panic!("OBD length wrong: {:?}", args);
-        }
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        ensure!(args.len() == 4);
         let band_arg = &args[0..2];
         let enabled_arg = &args[3];
-        let band: Band = parse_enum_from_number(command_string, band_arg)
-            .unwrap_or_else(|_| panic!("Failed to parse band from args: {:?}", args));
+        let band: Band = parse_enum_from_number(command_string, band_arg)?;
         let enabled = match enabled_arg {
             b'E' => true,
             b'D' => false,
             _ => {
-                panic!("Bad args for OBD {:?}", args);
+                bail!("Bad args for OBD {:?}", args);
             }
         };
-        Response::BandTxEnable(BandTxEnable { band, enabled })
+        Ok(Response::BandTxEnable(BandTxEnable { band, enabled }))
     }
 }
 
@@ -214,10 +210,10 @@ impl LocationSourceOption {
     // Option Location {OLC} Text 1. G=GPS calculated, M=Manual (DL4 data)
     pub const CODE: &'static [u8] = b"OLC";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::LocationSourceOption(LocationSourceOption {
-            location_source: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::LocationSourceOption(LocationSourceOption {
+            location_source: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -231,10 +227,10 @@ impl LocatorPrecisionOption {
     // character used in the Maidenhead report.
     pub const CODE: &'static [u8] = b"OLP";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::LocatorPrecisionOption(LocatorPrecisionOption {
-            locator_precision: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::LocatorPrecisionOption(LocatorPrecisionOption {
+            locator_precision: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -247,10 +243,10 @@ impl PowerEncodingOption {
     // Option Power
     pub const CODE: &'static [u8] = b"OPW";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::PowerEncodingOption(PowerEncodingOption {
-            power_encoding: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::PowerEncodingOption(PowerEncodingOption {
+            power_encoding: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -265,8 +261,8 @@ impl TimeSlotOption {
     // on the move or at top of hour)
     pub const CODE: &'static [u8] = b"OTS";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        let number: u16 = parse_number(command_string, args).unwrap();
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        let number: u16 = parse_number(command_string, args)?;
         let time_slot = match number {
             0..=4 => TimeSlot::TenMinute,
             5..=14 => TimeSlot::TwentyMinute,
@@ -274,10 +270,10 @@ impl TimeSlotOption {
             16 => TimeSlot::NoSchedule,
             17 => TimeSlot::Tracker,
             _ => {
-                panic!("Bad time slot {:?}", args);
+                bail!("Bad time slot {:?}", args);
             }
         };
-        Response::TimeSlotOption(TimeSlotOption { time_slot })
+        Ok(Response::TimeSlotOption(TimeSlotOption { time_slot }))
     }
 }
 
@@ -291,10 +287,10 @@ impl PrefixSuffixOption {
     // N=None
     pub const CODE: &'static [u8] = b"OPS";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::PrefixSuffixOption(PrefixSuffixOption {
-            prefix_suffix: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::PrefixSuffixOption(PrefixSuffixOption {
+            prefix_suffix: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -308,10 +304,10 @@ impl ConstellationOption {
     // B=BeiDou Only, A= GPS And BeiDou
     pub const CODE: &'static [u8] = b"OSC";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::ConstellationOption(ConstellationOption {
-            constellation: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::ConstellationOption(ConstellationOption {
+            constellation: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -324,11 +320,11 @@ impl CallSignData {
     // Data CallSign {DCS} Text 6
     pub const CODE: &'static [u8] = b"DCS";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
         // Data CallSign {DCS} Text 6
-        Response::CallSignData(CallSignData {
-            call_sign: ascii_bytes_to_string(args),
-        })
+        Ok(Response::CallSignData(CallSignData {
+            call_sign: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -343,10 +339,10 @@ impl SuffixData {
     // automatically appended after the Call Sign followed by the
     pub const CODE: &'static [u8] = b"DSF";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::SuffixData(SuffixData {
-            data_suffix: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::SuffixData(SuffixData {
+            data_suffix: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -362,10 +358,10 @@ impl PrefixData {
     // Prefix and the Call Sign
     pub const CODE: &'static [u8] = b"DPF";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::PrefixData(PrefixData {
-            data_prefix: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::PrefixData(PrefixData {
+            data_prefix: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -378,10 +374,10 @@ impl Locator4Data {
     // Data Locator 4 {DL4} Text 4
     pub const CODE: &'static [u8] = b"DL4";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::Locator4Data(Locator4Data {
-            locator_4: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::Locator4Data(Locator4Data {
+            locator_4: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -394,10 +390,10 @@ impl Locator6Data {
     // Data Locator 6 {DL6} Text 6
     pub const CODE: &'static [u8] = b"DL6";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::Locator6Data(Locator6Data {
-            locator_6: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::Locator6Data(Locator6Data {
+            locator_6: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -410,10 +406,10 @@ impl PowerData {
     // Data PowerData {DPD} Text 2 (00 to 60) dBm
     pub const CODE: &'static [u8] = b"DPD";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::PowerData(PowerData {
-            dbm: parse_number(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::PowerData(PowerData {
+            dbm: parse_number(command_string, args)?,
+        }))
     }
 }
 
@@ -426,10 +422,10 @@ impl NameData {
     // Data Name {DNM} Text 40
     pub const CODE: &'static [u8] = b"DNM";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::NameData(NameData {
-            name: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::NameData(NameData {
+            name: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -443,10 +439,12 @@ impl GeneratorFrequencyData {
     // CentiHertz. Padded with leading zeros to 12 characters
     pub const CODE: &'static [u8] = b"DGF";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        let centihertz: u32 = parse_number(command_string, args).unwrap();
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        let centihertz: u32 = parse_number(command_string, args)?;
         let hertz: f32 = centihertz as f32 / 100.;
-        Response::GeneratorFrequencyData(GeneratorFrequencyData { hertz })
+        Ok(Response::GeneratorFrequencyData(GeneratorFrequencyData {
+            hertz,
+        }))
     }
 }
 
@@ -461,10 +459,12 @@ impl ExternalReferenceFrequencyData {
     // 010000000
     pub const CODE: &'static [u8] = b"DER";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::ExternalReferenceFrequencyData(ExternalReferenceFrequencyData {
-            hertz: parse_number(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::ExternalReferenceFrequencyData(
+            ExternalReferenceFrequencyData {
+                hertz: parse_number(command_string, args)?,
+            },
+        ))
     }
 }
 
@@ -478,10 +478,12 @@ impl ProductModelNumberFactory {
     // 1011=WSPR-TX_LP1, 1012=WSPR Desktop, 1017=WSPR Mini
     pub const CODE: &'static [u8] = b"FPN";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::ProductModelNumberFactory(ProductModelNumberFactory {
-            model: parse_number(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::ProductModelNumberFactory(
+            ProductModelNumberFactory {
+                model: parse_number(command_string, args)?,
+            },
+        ))
     }
 }
 
@@ -494,10 +496,10 @@ impl HardwareVersionFactory {
     // Factory Hardware Version [FHV] S/G Text 3 0-255
     pub const CODE: &'static [u8] = b"FHV";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::HardwareVersionFactory(HardwareVersionFactory {
-            hardware_version: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::HardwareVersionFactory(HardwareVersionFactory {
+            hardware_version: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -510,10 +512,10 @@ impl HardwareRevisionFactory {
     // Factory Hardware Revision [FHR] S/G Text 3 0-255
     pub const CODE: &'static [u8] = b"FHR";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::HardwareRevisionFactory(HardwareRevisionFactory {
-            hardware_version: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::HardwareRevisionFactory(HardwareRevisionFactory {
+            hardware_version: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -526,10 +528,10 @@ impl SoftwareVersionFactory {
     // Factory Software Version [FSV] G Text 3 0-255
     pub const CODE: &'static [u8] = b"FSV";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::SoftwareVersionFactory(SoftwareVersionFactory {
-            software_version: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::SoftwareVersionFactory(SoftwareVersionFactory {
+            software_version: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -542,10 +544,10 @@ impl SoftwareRevisionFactory {
     // Factory Software Revision [FSR] G Text 3 0-255
     pub const CODE: &'static [u8] = b"FSR";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::SoftwareRevisionFactory(SoftwareRevisionFactory {
-            software_revision: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::SoftwareRevisionFactory(SoftwareRevisionFactory {
+            software_revision: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -560,10 +562,12 @@ impl ReferenceOscillatorFrequencyFactory {
     // Normally 026000000
     pub const CODE: &'static [u8] = b"FRF";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::ReferenceOscillatorFrequencyFactory(ReferenceOscillatorFrequencyFactory {
-            hertz: parse_number(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::ReferenceOscillatorFrequencyFactory(
+            ReferenceOscillatorFrequencyFactory {
+                hertz: parse_number(command_string, args)?,
+            },
+        ))
     }
 }
 
@@ -582,17 +586,17 @@ impl LowPassFilterFactory {
     // this as a filter
     pub const CODE: &'static [u8] = b"FLP";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
         // TODO(ch): fix this
-        if args.len() != 4 {
-            panic!("FLP length wrong: {:?}", args);
-        }
+        ensure!(args.len() == 4);
         let bank_arg = &args[0..1];
         let band_arg = &args[2..];
-        let filter_bank: FilterBank = parse_enum(command_string, bank_arg).unwrap();
-        let band: Band = parse_enum_from_number(command_string, band_arg)
-            .unwrap_or_else(|_| panic!("Failed to parse band from args: {:?}", args));
-        Response::LowPassFilterFactory(LowPassFilterFactory { filter_bank, band })
+        let filter_bank: FilterBank = parse_enum(command_string, bank_arg)?;
+        let band: Band = parse_enum_from_number(command_string, band_arg)?;
+        Ok(Response::LowPassFilterFactory(LowPassFilterFactory {
+            filter_bank,
+            band,
+        }))
     }
 }
 
@@ -605,10 +609,10 @@ impl Locator4GPS {
     // GPS locator 4 char Maidenhead {GL4} Text 4
     pub const CODE: &'static [u8] = b"GL4";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::Locator4GPS(Locator4GPS {
-            maidenhead_4: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::Locator4GPS(Locator4GPS {
+            maidenhead_4: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -621,10 +625,10 @@ impl Locator6GPS {
     // GPS locator 6 char Maidenhead {GL6} Text 6
     pub const CODE: &'static [u8] = b"GL6";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::Locator6GPS(Locator6GPS {
-            maidenhead_6: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::Locator6GPS(Locator6GPS {
+            maidenhead_6: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -637,11 +641,11 @@ impl TimeGPS {
     // GPS Time {GTM} Text 8 HH:MM:SS
     pub const CODE: &'static [u8] = b"GTM";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
         // TODO(ch): parse this.
-        Response::TimeGPS(TimeGPS {
-            hhmmss: ascii_bytes_to_string(args),
-        })
+        Ok(Response::TimeGPS(TimeGPS {
+            hhmmss: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -654,11 +658,11 @@ impl LockStatusGPS {
     // GPS Lock {GLC} Text 1 T=True F=False
     pub const CODE: &'static [u8] = b"GLC";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
         // TODO(ch): parse this.
-        Response::LockStatusGPS(LockStatusGPS {
-            lock: parse_enum(command_string, args).unwrap(),
-        })
+        Ok(Response::LockStatusGPS(LockStatusGPS {
+            lock: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -671,11 +675,11 @@ impl SatelliteInfoGPS {
     // GPS Satellite data {GSI} Text2 Text3 Text2 Text2 - ID Az El SNR
     pub const CODE: &'static [u8] = b"GSI";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
         // TODO(ch): parse this.
-        Response::SatelliteInfoGPS(SatelliteInfoGPS {
-            satellite_info: ascii_bytes_to_string(args),
-        })
+        Ok(Response::SatelliteInfoGPS(SatelliteInfoGPS {
+            satellite_info: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -689,10 +693,12 @@ impl TransmitterFrequency {
     // leading zeros
     pub const CODE: &'static [u8] = b"TFQ";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        let centihertz: u64 = parse_number(command_string, args).unwrap();
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        let centihertz: u64 = parse_number(command_string, args)?;
         let hertz = centihertz as f32 / 100.;
-        Response::TransmitterFrequency(TransmitterFrequency { hertz })
+        Ok(Response::TransmitterFrequency(TransmitterFrequency {
+            hertz,
+        }))
     }
 }
 
@@ -705,19 +711,17 @@ impl TransmitterStatus {
     // Transmitter On {TON} Text 1 T=True F=False
     pub const CODE: &'static [u8] = b"TON";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        if args.len() != 1 {
-            panic!("Wrong length TON response.");
-        }
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        ensure!(args.len() == 1);
         let first_byte = args[0];
         let on = match first_byte {
             b'T' => true,
             b'F' => false,
             _ => {
-                panic!("bad char {}", first_byte);
+                bail!("bad char {}", first_byte);
             }
         };
-        Response::TransmitterStatus(TransmitterStatus { on })
+        Ok(Response::TransmitterStatus(TransmitterStatus { on }))
     }
 }
 
@@ -728,9 +732,9 @@ impl MicrocontrollerPause {
     // Microcontroller Pause {MPS} Text 7 0-4,000,000Seconds
     pub const CODE: &'static [u8] = b"MPS";
 
-    fn parse(_command_string: &str, _args: &[u8]) -> Response {
+    fn parse(_command_string: &str, _args: &[u8]) -> Result<Response> {
         // TODO(ch): implement
-        Response::MicrocontrollerPause(MicrocontrollerPause {})
+        Ok(Response::MicrocontrollerPause(MicrocontrollerPause {}))
     }
 }
 
@@ -743,10 +747,10 @@ impl MicrocontrollerInfo {
     // Microcontroller Information {MIN} Text
     pub const CODE: &'static [u8] = b"MIN";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        Response::MicrocontrollerInfo(MicrocontrollerInfo {
-            info: ascii_bytes_to_string(args),
-        })
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::MicrocontrollerInfo(MicrocontrollerInfo {
+            info: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -759,10 +763,10 @@ impl LowPassFilterSet {
     // Low Pass filter set {LPI} Text 1 A-D
     pub const CODE: &'static [u8] = b"LPI";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        Response::LowPassFilterSet(LowPassFilterSet {
-            filter_bank: parse_enum(command_string, args).unwrap(),
-        })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        Ok(Response::LowPassFilterSet(LowPassFilterSet {
+            filter_bank: parse_enum(command_string, args)?,
+        }))
     }
 }
 
@@ -776,10 +780,12 @@ impl MicrocontrollerVoltage {
     // 3300)
     pub const CODE: &'static [u8] = b"MVC";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
-        let millivolts: u32 = ascii_bytes_to_string(args).parse().unwrap();
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
+        let millivolts: u32 = ascii_bytes_to_string(args)?.parse()?;
         let voltage: f32 = millivolts as f32 / 1000.;
-        Response::MicrocontrollerVoltage(MicrocontrollerVoltage { voltage })
+        Ok(Response::MicrocontrollerVoltage(MicrocontrollerVoltage {
+            voltage,
+        }))
     }
 }
 
@@ -792,10 +798,11 @@ impl TransmitterCurrentBand {
     // Transmitter Current Band {TBN} Text 2=Band number *
     pub const CODE: &'static [u8] = b"TBN";
 
-    fn parse(command_string: &str, args: &[u8]) -> Response {
-        let band: Band = parse_enum_from_number(command_string, args)
-            .unwrap_or_else(|_| panic!("Failed to parse band from args: {:?}", args));
-        Response::TransmitterCurrentBand(TransmitterCurrentBand { band })
+    fn parse(command_string: &str, args: &[u8]) -> Result<Response> {
+        let band: Band = parse_enum_from_number(command_string, args)?;
+        Ok(Response::TransmitterCurrentBand(TransmitterCurrentBand {
+            band,
+        }))
     }
 }
 
@@ -809,11 +816,11 @@ impl TransmitterWSPRSymbol {
     // symbol count 0-161
     pub const CODE: &'static [u8] = b"TWS";
 
-    fn parse(_command_string: &str, args: &[u8]) -> Response {
+    fn parse(_command_string: &str, args: &[u8]) -> Result<Response> {
         // TODO(ch): figure this out
-        Response::TransmitterWSPRSymbol(TransmitterWSPRSymbol {
-            something: ascii_bytes_to_string(args),
-        })
+        Ok(Response::TransmitterWSPRSymbol(TransmitterWSPRSymbol {
+            something: ascii_bytes_to_string(args)?,
+        }))
     }
 }
 
@@ -824,8 +831,10 @@ impl TransmitterBandCycleComplete {
     // Transmitter WSPR Band Cycle Complete {TCC}
     pub const CODE: &'static [u8] = b"TCC";
 
-    fn parse(_command_string: &str, _args: &[u8]) -> Response {
-        Response::TransmitterBandCycleComplete(TransmitterBandCycleComplete {})
+    fn parse(_command_string: &str, _args: &[u8]) -> Result<Response> {
+        Ok(Response::TransmitterBandCycleComplete(
+            TransmitterBandCycleComplete {},
+        ))
     }
 }
 
@@ -874,59 +883,56 @@ pub enum Response {
     TransmitterBandCycleComplete(TransmitterBandCycleComplete),
 }
 
-fn ascii_bytes_to_string(bytes: &[u8]) -> String {
-    AsciiStr::from_ascii(bytes)
-        .unwrap_or_else(|_| panic!("could not interpret bytes: {:?}", bytes))
-        .to_string()
+fn ascii_bytes_to_string(bytes: &[u8]) -> Result<String> {
+    Ok(AsciiStr::from_ascii(bytes)?.to_string())
 }
 
-fn parse_enum<T: TryFrom<u8>>(command_string: &str, args: &[u8]) -> Result<T, ()> {
-    if args.len() != 1 {
-        println!("Wrong length {command_string} response.");
-        return Err(());
-    }
+fn parse_enum<T: TryFrom<u8>>(command_string: &str, args: &[u8]) -> Result<T> {
+    ensure!(args.len() == 1);
     let first_byte = args[0];
-    T::try_from(first_byte).map_err(|_| ())
-}
-
-fn parse_enum_from_number<T: TryFrom<u8>>(command_string: &str, args: &[u8]) -> Result<T, ()> {
-    if args.is_empty() || args.len() > 3 {
-        println!("Wrong length {command_string} response.");
-        return Err(());
+    if let Ok(e) = T::try_from(first_byte) {
+        Ok(e)
+    } else {
+        bail!("Failed to parse enum from {command_string}");
     }
-    let n: u8 = parse_number(command_string, args).map_err(|_| ())?;
-    T::try_from(n).map_err(|_| ())
 }
 
-fn parse_number<T: FromStr>(command_string: &str, args: &[u8]) -> Result<T, ()> {
-    if args.is_empty() {
-        println!("Too short {command_string} response.");
-        return Err(());
+fn parse_enum_from_number<T: TryFrom<u8>>(command_string: &str, args: &[u8]) -> Result<T> {
+    ensure!(!args.is_empty() && args.len() <= 3);
+    let n: u8 = parse_number(command_string, args)?;
+    if let Ok(e) = T::try_from(n) {
+        Ok(e)
+    } else {
+        bail!("Failed to parse enum from {command_string}");
     }
-    ascii_bytes_to_string(args).parse::<T>().map_err(|_| ())
 }
 
-pub fn process_line(mut s: Vec<u8>) -> Option<Response> {
+fn parse_number<T: FromStr>(command_string: &str, args: &[u8]) -> Result<T> {
+    ensure!(!args.is_empty());
+    if let Ok(n) = ascii_bytes_to_string(args)?.parse::<T>() {
+        Ok(n)
+    } else {
+        bail!("Failed to parse number from {command_string}");
+    }
+}
+
+pub fn process_line(mut s: Vec<u8>) -> Result<Response> {
+    trace!("process_line: {s:?}");
     s.retain_mut(|c| c != &b'\n' && c != &b'\r');
-    trace!("line: '{:?}'", ascii_bytes_to_string(&s));
-
     if s.is_empty() {
-        return None;
+        bail!("Empty line");
     }
 
-    if s.len() < 5 {
-        warn!("Line is too short (s='{s:?}')");
-        return None;
-    }
+    ensure!(s.len() >= 5);
 
     let command = &s[..5];
     let code = &s[1..4];
-    let command_string = ascii_bytes_to_string(command);
+    let command_string = ascii_bytes_to_string(command)?;
     let args = &s[6..];
 
-    trace!("read: '{:?}' '{}'", command, ascii_bytes_to_string(args));
+    trace!("read: '{:?}' {:?}", command, args);
 
-    let response: Response = match code {
+    match code {
         CurrentModeCommand::CODE => CurrentModeCommand::parse(&command_string, args),
         CurrentReferenceCommand::CODE => CurrentReferenceCommand::parse(&command_string, args),
         TxPauseOption::CODE => TxPauseOption::parse(&command_string, args),
@@ -975,10 +981,9 @@ pub fn process_line(mut s: Vec<u8>) -> Option<Response> {
             TransmitterBandCycleComplete::parse(&command_string, args)
         }
         _ => {
-            panic!("unknown response {:?} '{}'", command, command_string);
+            bail!("unknown response {:?} '{}'", command, command_string);
         }
-    };
-    Some(response)
+    }
 }
 
 fn write_code<RW>(port: &mut RW, code: &[u8])
@@ -1005,32 +1010,33 @@ impl<'a> ZachtekDevice<'a> {
         Self { port }
     }
 
-    pub fn reset_device(&mut self) {
+    pub fn reset_device(&mut self) -> Result<()> {
         // To reset the device:
         //   Set RTS to HIGH
         //   Wait a while (100ms)
         //   Set RTS to LOW
         self.port
             .write_request_to_send(true)
-            .expect("Failed to set RTS");
+            .context("Failed to set RTS")?;
         std::thread::sleep(Duration::from_millis(100));
         self.port
             .write_request_to_send(false)
-            .expect("Failed to set RTS");
+            .context("Failed to set RTS")
     }
 
-    pub fn set_run(&mut self) {
+    pub fn set_run(&mut self) -> Result<()> {
         // To set device to run:
         //   Set DTR LOW
         //   Wait a while (100ms)
         self.port
             .write_data_terminal_ready(false)
-            .expect("Failed to set DTR");
+            .context("Failed to set DTR")?;
         std::thread::sleep(Duration::from_millis(100));
         self.port
             .write_request_to_send(false)
-            .expect("Failed to set RTS");
+            .context("Failed to set RTS")?;
         std::thread::sleep(Duration::from_millis(100));
+        Ok(())
     }
 
     fn poll_thread(mut port: Box<dyn SerialPort>, poll_sleep_interval: Duration) {
@@ -1081,25 +1087,38 @@ impl<'a> ZachtekDevice<'a> {
         });
     }
 
-    pub fn pump(&mut self) {
-        self.port
-            .clear(ClearBuffer::Input)
-            .expect("Failed to clear input.");
-        let mut reader = BufReader::new(&mut self.port);
+    pub fn clear_input(&mut self) -> Result<()> {
+        self.port.clear(ClearBuffer::Input)?;
+        Ok(())
+    }
+
+    pub fn read_response(&mut self) -> Result<Response> {
+        let mut buf = vec![];
         loop {
-            let mut buf = vec![];
-            match reader.read_until(b'\n', &mut buf) {
-                Ok(_) => {
-                    let response = process_line(buf);
-                    if response.is_some() {
-                        println!("{:?}", response.unwrap());
+            let mut one_byte = [0u8];
+            match self.port.read(&mut one_byte) {
+                Ok(n_read) => {
+                    ensure!(n_read == 1);
+                    let byte = one_byte[0];
+
+                    match byte {
+                        b'\n' if !buf.is_empty() => {
+                            return process_line(buf);
+                        }
+                        b'\n' | b'\r' => {}
+                        _ => {
+                            buf.push(byte);
+                        }
                     }
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
-                    panic!("Error: Timeout on serial port");
+                    warn!("Error: Timeout on serial port");
+                    //return Err(e.into());
+                    bail!("timeout");
                 }
                 Err(e) => {
-                    panic!("Error: Failed to read from serial port: {}", e);
+                    error!("Error: Failed to read from serial port: {}", e);
+                    return Err(e.into());
                 }
             }
         }
