@@ -5,7 +5,16 @@ use serialport::{ClearBuffer, SerialPort};
 use std::io;
 use std::str::FromStr;
 use std::time::Duration;
+use thiserror::Error;
 use tracing::{error, trace, warn};
+
+#[derive(Error, Debug)]
+enum ZachtekError {
+    #[error("Timeout")]
+    Timeout,
+    #[error("I/O Error")]
+    IoError(#[from] io::Error),
+}
 
 #[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
@@ -1114,11 +1123,11 @@ impl<'a> ZachtekDevice<'a> {
                 Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                     warn!("Error: Timeout on serial port");
                     //return Err(e.into());
-                    bail!("timeout");
+                    return Err(ZachtekError::Timeout.into());
                 }
                 Err(e) => {
                     error!("Error: Failed to read from serial port: {}", e);
-                    return Err(e.into());
+                    return Err(ZachtekError::IoError(e).into());
                 }
             }
         }
