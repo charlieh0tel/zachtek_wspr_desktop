@@ -1,6 +1,8 @@
 [package]
 name = "zachtek"
 version = "0.1.1"
+# A binary, not a library: nothing here is meant for crates.io.
+publish = false
 edition = "2021"
 
 [dependencies]
