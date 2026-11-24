@@ -1,0 +1,16 @@
+version: 2
+
+updates:
+# The only `uses:` here are deb-workflows' reusable workflows at @v1, a tag
+# kept moving on purpose, so this stays quiet until that gets a new major --
+# or until a third-party action is added, which is then watched from the start.
+#
+# Actions only: advisories for the locked dependencies come from Dependabot
+# alerts and security updates, and version bumps alone are noise.
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: weekly
+  groups:
+    actions:
+      patterns: ["*"]
